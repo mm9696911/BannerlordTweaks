@@ -1,6 +1,9 @@
 ﻿using HarmonyLib;
 using ModLib;
 using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
 using System.Windows.Forms;
 using TaleWorlds.CampaignSystem;
 using TaleWorlds.Core;
@@ -20,6 +23,7 @@ namespace BannerlordTweaks
 
                 var harmony = new Harmony("mod.bannerlord.mipen");
                 harmony.PatchAll();
+
             }
             catch (Exception ex)
             {
@@ -55,10 +59,44 @@ namespace BannerlordTweaks
                         Settings.Instance.TwinsProbabilityTweakEnabled)
                     gameStarter.AddModel(new TweakedPregnancyModel());
                 if (Settings.Instance.AgeTweaksEnabled)
-                    gameStarter.AddModel(new TweakedAgeModel());
+                {
+                    TweakedAgeModel model = new TweakedAgeModel();
+                    List<string> configErrors = model.GetConfigErrors().ToList();
+                    if (configErrors.Any())
+                    {
+                        StringBuilder sb = new StringBuilder();
+                        sb.AppendLine("There is a configuration error in the \'Age\' tweaks from Bannerlord Tweaks.");
+                        sb.AppendLine("Please check the below errors and fix the age settings in the settings menu:");
+                        sb.AppendLine();
+                        foreach (var e in configErrors)
+                            sb.AppendLine(e);
+                        sb.AppendLine();
+                        sb.AppendLine("The age tweaks will not be applied until these errors have been resolved.");
+                        sb.Append("Note that this is only a warning message and not a crash.");
+
+                        MessageBox.Show(sb.ToString(), "Configuration Error in Bannerlord Tweaks");
+                    }
+                    else
+                        gameStarter.AddModel(new TweakedAgeModel());
+                }
                 if (Settings.Instance.AttributeFocusPointTweakEnabled)
                     gameStarter.AddModel(new TweakedCharacterDevelopmentModel());
+                if (Settings.Instance.DifficultyTweaksEnabled)
+                    gameStarter.AddModel(new TweakedDifficultyModel());
             }
+        }
+
+        public override bool DoLoading(Game game)
+        {
+            if (Campaign.Current != null)
+            {
+                if (Settings.Instance.PrisonerImprisonmentTweakEnabled)
+                    PrisonerImprisonmentTweak.Apply(Campaign.Current);
+                if (Settings.Instance.DailyTroopExperienceTweakEnabled)
+                    DailyTroopExperienceTweak.Apply(Campaign.Current);
+            }
+            return base.DoLoading(game);
         }
     }
 }
+
